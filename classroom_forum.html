@@ -203,6 +203,7 @@
       }
     }
 
+    // UPDATED LOGIN: Auto-registers new usernames instantly if they don't exist yet
     async function login() {
       showLoginError("");
       let email = document.getElementById('email').value.trim();
@@ -211,8 +212,16 @@
       if (!email || !password) return showLoginError("Please enter username and password");
       if (!email.includes('@')) email = `${email}@livechat.local`;
 
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) return showLoginError("Login failed: " + error.message);
+      let { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        // If account doesn't exist, automatically sign them up for instant testing convenience
+        let signUpRes = await supabaseClient.auth.signUp({ email, password });
+        if (signUpRes.error) {
+          return showLoginError("Login failed: " + signUpRes.error.message);
+        }
+        data = signUpRes;
+      }
 
       updateActivityTimestamp();
       handleUserSession(data.user);
